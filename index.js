@@ -113,5 +113,5 @@ server.delete("/destinations", (req, res) => {
 
   destinations = newDestinations;
 
-  res.redirect("/destinations");
+  res.redirect(303, "/destinations");
 });
