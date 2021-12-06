@@ -7,7 +7,7 @@ const { generateUniqueId } = require("./services");
 const server = express();
 server.use(express.json());
 server.use(cors());
-// server.use(express.urlencoded())
+server.use(express.urlencoded());
 
 // const PORT = process.env.PORT === undefined ? 3000 : process.env.PORT
 
