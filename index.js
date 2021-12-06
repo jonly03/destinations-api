@@ -7,7 +7,15 @@ const server = express();
 server.use(express.json());
 // server.use(express.urlencoded())
 
-server.listen(3000, function () {
+// const PORT = process.env.PORT === undefined ? 3000 : process.env.PORT
+
+// let PORT = 3000
+
+// if (process.env.PORT !== undefined){
+//   PORT = process.env.PORT
+// }
+
+server.listen(process.env.PORT || 3000, function () {
   console.log("Server listening on PORT 3000");
 });
 
