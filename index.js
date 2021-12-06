@@ -106,8 +106,8 @@ server.put("/destinations/", (req, res) => {
 // HOW TO GET THE ID from the reqs
 // route parameters /destinations/:id => req.params.id
 // query /destinations?id=198745 => req.query.id
-server.delete("/destinations/:id", (req, res) => {
-  const destId = req.params.id;
+server.delete("/destinations", (req, res) => {
+  const destId = req.query.id;
 
   const newDestinations = destinations.filter((dest) => dest.id !== destId);
 
