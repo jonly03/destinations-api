@@ -1,3 +1,4 @@
+const fetch = require("node-fetch");
 function generateUniqueId() {
   // "123456"
   let id = "";
