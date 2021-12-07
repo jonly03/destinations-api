@@ -11,4 +11,13 @@ function generateUniqueId() {
   return id;
 }
 
-module.exports = { generateUniqueId };
+async function getUnsplashPhoto({ name, location }) {
+  const UNSPLASH_URL = `https://api.unsplash.com/photos/random?client_id=ZUAPn3ODLz7xSJEa_kQZY4B2kfKSccXz6f3jBytjcGE&query=${name} ${location}`;
+
+  const fetchRes = await fetch(UNSPLASH_URL);
+  const data = await fetchRes.json();
+
+  return data.urls.small;
+}
+
+module.exports = { generateUniqueId, getUnsplashPhoto };
