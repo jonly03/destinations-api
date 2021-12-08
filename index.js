@@ -1,120 +1,114 @@
-require("dotenv").config();
-
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ObjectId } = require("mongodb");
-
-const { getUnsplashPhoto } = require("./services");
+let { destinations } = require("./db");
+const { generateUniqueId, getUnsplashPhoto } = require("./services");
 
 const server = express();
 server.use(express.json());
 server.use(cors());
-server.use(express.urlencoded({ extended: true }));
+server.use(express.urlencoded());
 
-const MongoDB_URL = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.whkkr.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
+// const PORT = process.env.PORT === undefined ? 3000 : process.env.PORT
 
-const client = new MongoClient(MongoDB_URL);
+let PORT = process.env.PORT || 3000;
 
-client.connect().then(() => {
-  const db = client.db("first_mongodb");
+// if (process.env.PORT !== undefined){
+//   PORT = process.env.PORT
+// }
 
-  const destinations = db.collection("destinations");
+server.listen(PORT, function () {
+  console.log(`Server listening on PORT ${PORT}`);
+});
 
-  // const PORT = process.env.PORT === undefined ? 3000 : process.env.PORT
+// POST => create destinations
+// data => {name^, location^, photo, description}
+server.post("/destinations", async (req, res) => {
+  const { name, location, description } = req.body;
 
-  let PORT = process.env.PORT || 3000;
+  // Make sure we have a name AND location
+  if (
+    name === undefined ||
+    name.length === 0 ||
+    location === undefined ||
+    location.length === 0
+  ) {
+    return res
+      .status(400)
+      .json({ message: "Name and Location are both required" });
+  }
 
-  // if (process.env.PORT !== undefined){
-  //   PORT = process.env.PORT
-  // }
+  const dest = { id: generateUniqueId(), name, location };
 
-  server.listen(PORT, function () {
-    console.log(`Server listening on PORT ${PORT}`);
-  });
+  dest.photo = await getUnsplashPhoto({ name, location });
 
-  // POST => create destinations
-  // data => {name^, location^, photo, description}
-  server.post("/destinations", async (req, res) => {
-    const { name, location, description } = req.body;
+  if (description && description.length !== 0) {
+    dest.description = description;
+  }
 
-    // Make sure we have a name AND location
-    if (
-      name === undefined ||
-      name.length === 0 ||
-      location === undefined ||
-      location.length === 0
-    ) {
-      return res
-        .status(400)
-        .json({ message: "Name and Location are both required" });
+  destinations.push(dest);
+
+  res.redirect("/destinations");
+});
+
+// GET => read destinations
+// accepts the follow query parameters
+// continent
+server.get("/destinations", (req, res) => {
+  res.send(destinations);
+});
+
+// PUT => edit a destination
+server.put("/destinations/", async (req, res) => {
+  const { id, name, location, description } = req.body;
+
+  if (id === undefined) {
+    return res.status(400).json({ message: "id is required" });
+  }
+
+  if (name !== undefined && name.length === 0) {
+    return res.status(400).json({ message: "Name can't be empty" });
+  }
+
+  if (location !== undefined && location.length === 0) {
+    return res.status(400).json({ message: "Location can't be empty" });
+  }
+
+  for (const dest of destinations) {
+    if (dest.id === id) {
+      if (name !== undefined) {
+        dest.name = name;
+      }
+
+      if (location !== undefined) {
+        dest.location = location;
+      }
+
+      if (name !== undefined || location !== undefined) {
+        dest.photo = await getUnsplashPhoto({
+          name: dest.name,
+          location: dest.location,
+        });
+      }
+
+      if (description !== undefined) {
+        dest.description = description;
+      }
+
+      return res.json(dest);
     }
+  }
+});
 
-    const dest = { name, location };
+// DELETE => delete a destination
+// HOW TO GET THE ID from the reqs
+// route parameters /destinations/:id => req.params.id
+// query /destinations?id=198745 => req.query.id
+server.delete("/destinations/:id", (req, res) => {
+  const destId = req.params.id;
 
-    dest.photo = await getUnsplashPhoto({ name, location });
+  const newDestinations = destinations.filter((dest) => dest.id !== destId);
 
-    if (description && description.length !== 0) {
-      dest.description = description;
-    }
+  destinations = newDestinations;
 
-    destinations.insertOne(dest);
-
-    res.redirect("/destinations");
-  });
-
-  // GET => read destinations
-  // accepts the follow query parameters
-  // continent
-  server.get("/destinations", async (req, res) => {
-    const data = await destinations.find({}).toArray();
-    res.send(data);
-  });
-
-  // PUT => edit a destination
-  server.put("/destinations/", async (req, res) => {
-    const { id, name, location, description } = req.body;
-
-    if (id === undefined) {
-      return res.status(400).json({ message: "id is required" });
-    }
-
-    if (name !== undefined && name.length === 0) {
-      return res.status(400).json({ message: "Name can't be empty" });
-    }
-
-    if (location !== undefined && location.length === 0) {
-      return res.status(400).json({ message: "Location can't be empty" });
-    }
-
-    const newDest = {
-      name: name,
-      location: location,
-      photo: await getUnsplashPhoto({ name, location }),
-    };
-
-    if (description !== undefined) {
-      newDest.description = description;
-    }
-
-    const updateDest = await destinations.findOneAndUpdate(
-      { _id: ObjectId(id) },
-      { $set: newDest }
-    );
-
-    return res.json(updateDest.value);
-  });
-
-  // DELETE => delete a destination
-  // HOW TO GET THE ID from the reqs
-  // route parameters /destinations/:id => req.params.id
-  // query /destinations?id=198745 => req.query.id
-  server.delete("/destinations/:id", (req, res) => {
-    const destId = req.params.id;
-
-    const newDestinations = destinations.filter((dest) => dest.id !== destId);
-
-    destinations = newDestinations;
-
-    res.redirect(303, "/destinations");
-  });
+  res.redirect(303, "/destinations");
 });
